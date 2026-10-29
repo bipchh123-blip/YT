@@ -1,4 +1,3 @@
-
 import io
 import os
 import re
@@ -18,10 +17,6 @@ st.set_page_config(
 )
 
 
-# ==========================================
-# CHANNEL PRESETS
-# ==========================================
-
 CHANNELS = {
     "Football Explained": {
         "voice_id": "2mltbVQP21Fq8XgIfRQJ",
@@ -32,7 +27,6 @@ CHANNELS = {
         "speed": 1.00,
         "speaker_boost": True,
     },
-
     "Harry Potter": {
         "voice_id": "2mltbVQP21Fq8XgIfRQJ",
         "model_id": "eleven_multilingual_v2",
@@ -42,7 +36,6 @@ CHANNELS = {
         "speed": 1.00,
         "speaker_boost": True,
     },
-
     "Extreme Earth": {
         "voice_id": "2mltbVQP21Fq8XgIfRQJ",
         "model_id": "eleven_multilingual_v2",
@@ -52,7 +45,6 @@ CHANNELS = {
         "speed": 1.00,
         "speaker_boost": True,
     },
-
     "The Chelsea Brief": {
         "voice_id": "3WqHLnw80rOZqJzW9YRB",
         "model_id": "eleven_multilingual_v2",
@@ -65,18 +57,10 @@ CHANNELS = {
 }
 
 
-# ==========================================
-# CHUNK SETTINGS
-# ==========================================
-
 TARGET_CHARACTERS = 650
 MAX_CHARACTERS = 700
 MIN_CHARACTERS = 500
 
-
-# ==========================================
-# SECRETS
-# ==========================================
 
 def get_secret(name, default=""):
     try:
@@ -99,13 +83,13 @@ def password_gate():
 
     password = st.text_input(
         "Password",
-        type="password"
+        type="password",
     )
 
     if st.button(
         "Open studio",
         type="primary",
-        use_container_width=True
+        use_container_width=True,
     ):
         if password == expected:
             st.session_state.authenticated = True
@@ -116,29 +100,21 @@ def password_gate():
     st.stop()
 
 
-# ==========================================
-# HELPERS
-# ==========================================
-
 def safe_filename(value):
     value = re.sub(
         r'[<>:"/\\|?*]',
         "",
-        value
+        value,
     )
 
     value = re.sub(
         r"\s+",
         " ",
-        value
+        value,
     ).strip()
 
     return value or "Voiceover"
 
-
-# ==========================================
-# READ TXT / PDF
-# ==========================================
 
 def read_upload(file):
     ext = file.name.lower().rsplit(".", 1)[-1]
@@ -148,7 +124,7 @@ def read_upload(file):
         for encoding in (
             "utf-8",
             "utf-8-sig",
-            "cp1252"
+            "cp1252",
         ):
             try:
                 return raw.decode(encoding)
@@ -157,7 +133,7 @@ def read_upload(file):
 
         return raw.decode(
             "utf-8",
-            errors="replace"
+            errors="replace",
         )
 
     if ext == "pdf":
@@ -180,13 +156,9 @@ def read_upload(file):
     )
 
 
-# ==========================================
-# SCRIPT SPLITTING
-# ==========================================
-
 def split_long_piece(
     text,
-    max_chars
+    max_chars,
 ):
     words = text.split()
 
@@ -216,7 +188,7 @@ def split_script(text):
     text = re.sub(
         r"\s+",
         " ",
-        text
+        text,
     ).strip()
 
     if not text:
@@ -224,7 +196,7 @@ def split_script(text):
 
     sentences = re.split(
         r'(?<=[.!?])\s+',
-        text
+        text,
     )
 
     expanded = []
@@ -234,7 +206,7 @@ def split_script(text):
             expanded.extend(
                 split_long_piece(
                     sentence,
-                    MAX_CHARACTERS
+                    MAX_CHARACTERS,
                 )
             )
         else:
@@ -273,7 +245,6 @@ def split_script(text):
             current.strip()
         )
 
-    # Try to prevent a tiny final clip
     if (
         len(chunks) >= 2
         and len(chunks[-1]) < MIN_CHARACTERS
@@ -295,28 +266,23 @@ def split_script(text):
             safe_chunks.extend(
                 split_long_piece(
                     chunk,
-                    MAX_CHARACTERS
+                    MAX_CHARACTERS,
                 )
             )
 
     return safe_chunks
 
 
-# ==========================================
-# ELEVENLABS GENERATION
-# ==========================================
-
 def generate_clip(
     client,
     text,
-    preset
+    preset,
 ):
     audio = client.text_to_speech.convert(
         voice_id=preset["voice_id"],
         text=text,
         model_id=preset["model_id"],
         output_format="mp3_44100_128",
-
         voice_settings=VoiceSettings(
             stability=preset["stability"],
             similarity_boost=preset["similarity"],
@@ -333,17 +299,13 @@ def generate_clip(
     )
 
 
-# ==========================================
-# COMBINE MP3
-# ==========================================
-
 def combine_mp3s(clips):
     combined = AudioSegment.empty()
 
     for clip in clips:
         combined += AudioSegment.from_file(
             io.BytesIO(clip),
-            format="mp3"
+            format="mp3",
         )
 
     out = io.BytesIO()
@@ -351,65 +313,56 @@ def combine_mp3s(clips):
     combined.export(
         out,
         format="mp3",
-        bitrate="192k"
+        bitrate="192k",
     )
 
     return out.getvalue()
 
-
-# ==========================================
-# PROJECT ZIP
-# ==========================================
 
 def make_project_zip(
     full_audio,
     clips,
     chunks,
     script_text,
-    title
+    title,
 ):
     out = io.BytesIO()
 
     with zipfile.ZipFile(
         out,
         "w",
-        zipfile.ZIP_DEFLATED
+        zipfile.ZIP_DEFLATED,
     ) as archive:
-
         safe_title = safe_filename(
             title
         )
 
         archive.writestr(
             "script.txt",
-            script_text
+            script_text,
         )
 
         archive.writestr(
             f"{safe_title} - FULL.mp3",
-            full_audio
+            full_audio,
         )
 
         for idx, (clip, text) in enumerate(
             zip(clips, chunks),
-            start=1
+            start=1,
         ):
             archive.writestr(
                 f"Clips/{idx:02d}.mp3",
-                clip
+                clip,
             )
 
             archive.writestr(
                 f"Clips/{idx:02d}.txt",
-                text
+                text,
             )
 
     return out.getvalue()
 
-
-# ==========================================
-# APP
-# ==========================================
 
 password_gate()
 
@@ -421,10 +374,9 @@ st.caption(
     "Paste a script → generate with ElevenLabs → download the finished voiceover"
 )
 
-
 api_key = get_secret(
     "ELEVENLABS_API_KEY",
-    ""
+    "",
 )
 
 if not api_key:
@@ -432,46 +384,39 @@ if not api_key:
         "ELEVENLABS_API_KEY has not been added to the website secrets."
     )
 
-
 channel = st.selectbox(
     "Channel",
-    list(CHANNELS)
+    list(CHANNELS),
 )
 
 preset = CHANNELS[channel]
 
-
 title = st.text_input(
     "Video title",
-    placeholder="e.g. Every Football Tactical Term Explained"
+    placeholder="e.g. Every Football Tactical Term Explained",
 )
-
 
 tab1, tab2 = st.tabs(
     [
         "Paste script",
-        "Upload TXT / PDF"
+        "Upload TXT / PDF",
     ]
 )
-
 
 with tab1:
     pasted = st.text_area(
         "Script",
         height=350,
-        placeholder="Paste the complete narration script here..."
+        placeholder="Paste the complete narration script here...",
     )
-
 
 with tab2:
     uploaded = st.file_uploader(
         "Upload script",
-        type=["txt", "pdf"]
+        type=["txt", "pdf"],
     )
 
-
 script = pasted
-
 
 if uploaded is not None:
     try:
@@ -490,13 +435,11 @@ if uploaded is not None:
 
         script = ""
 
-
 chunks = (
     split_script(script)
     if script.strip()
     else []
 )
-
 
 if chunks:
     st.info(
@@ -510,13 +453,12 @@ if chunks:
     ):
         for idx, chunk in enumerate(
             chunks,
-            start=1
+            start=1,
         ):
             st.write(
                 f"Part {idx:02d}: "
                 f"{len(chunk)} characters"
             )
-
 
 with st.expander(
     "Current voice preset"
@@ -533,17 +475,11 @@ Target characters: {TARGET_CHARACTERS}
 Maximum characters: {MAX_CHARACTERS}"""
     )
 
-
-# ==========================================
-# GENERATE BUTTON
-# ==========================================
-
 if st.button(
     "Generate full voiceover",
     type="primary",
-    use_container_width=True
+    use_container_width=True,
 ):
-
     if not api_key:
         st.error(
             "The ElevenLabs API key is missing from the website secrets."
@@ -568,25 +504,19 @@ if st.button(
         )
         st.stop()
 
-
     client = ElevenLabs(
         api_key=api_key
     )
 
-
     progress = st.progress(0)
-
     status = st.empty()
-
     clips = []
-
 
     try:
         for idx, chunk in enumerate(
             chunks,
-            start=1
+            start=1,
         ):
-
             status.write(
                 f"Generating part "
                 f"{idx}/{len(chunks)} "
@@ -596,7 +526,7 @@ if st.button(
             clip = generate_clip(
                 client,
                 chunk,
-                preset
+                preset,
             )
 
             clips.append(
@@ -607,7 +537,6 @@ if st.button(
                 idx / len(chunks)
             )
 
-
         status.write(
             "Combining generated clips…"
         )
@@ -616,13 +545,11 @@ if st.button(
             clips
         )
 
-
     except Exception as exc:
         st.error(
             f"Voiceover generation failed: {exc}"
         )
         st.stop()
-
 
     progress.progress(
         1.0
@@ -630,30 +557,22 @@ if st.button(
 
     status.empty()
 
-
-    # ======================================
-    # RESULTS
-    # ======================================
-
     st.success(
         "Voiceover complete."
     )
 
-
     st.audio(
         full_audio,
-        format="audio/mp3"
+        format="audio/mp3",
     )
-
 
     project_zip = make_project_zip(
         full_audio,
         clips,
         chunks,
         script,
-        title
+        title,
     )
-
 
     st.download_button(
         "⬇️ Download full voiceover",
@@ -666,7 +585,6 @@ if st.button(
         use_container_width=True,
     )
 
-
     st.download_button(
         "📦 Download full project",
         data=project_zip,
@@ -677,13 +595,12 @@ if st.button(
         use_container_width=True,
     )
 
-
     with st.expander(
         "Preview individual clips"
     ):
         for idx, clip in enumerate(
             clips,
-            start=1
+            start=1,
         ):
             st.write(
                 f"Part {idx:02d} "
@@ -692,6 +609,5 @@ if st.button(
 
             st.audio(
                 clip,
-                format="audio/mp3"
+                format="audio/mp3",
             )
-```
